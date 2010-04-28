@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<xss>
+	<attack>
+		<name>Detection of SQL meta-characters</name>
+		<code>/(\%27)|(\')|(\-\-)|(\%23)|(#)/ix</code>
+		<level>1</level>
+		<desc>
+			We first detect either the hex equivalent of the single-quote, the single-quote itself or the presence of the double-dash. 
+			These are SQL characters for MS SQL Server and Oracle, which denote the beginning of a comment, and everything that follows is ignored. 
+			Additionally, if you're using MySQL, you need to check for presence of the '#' or its hex-equivalent. 
+			Note that we do not need to check for the hex-equivalent of the double-dash, 
+			because it is not an HTML meta-character and will not be encoded by the browser. 
+			Also, if an attacker tries to manually modify the double-dash to its hex value of %2D (using a proxy like Achilles [ref 5]), 
+			the SQL Injection attack fails.
+		</desc>
+	</attack>
+	<attack>
+		<name>Modified regex for detection of SQL meta-characters</name>
+		<code>/((\%3D)|(=))[^\n]*((\%27)|(\')|(\-\-)|(\%3B)|(;))/i</code>
+		<level>1</level>
+		<desc>
+			This signature first looks out for the = sign or its hex equivalent (%3D). It then allows for zero or more non-newline characters, 
+			and then it checks for the single-quote, the double-dash or the semi-colon.
+			A typical SQL injection attempt of course revolves around the use of the single quote to manipulate the original query so that it always results in 
+			a true value. Most of the examples that discuss this attack use the string 1'or'1'='1. However, detection of this string can be easily evaded by 
+			supplying a value such as 1'or2&gt;1--. Thus the only part that is constant in this is the initial alphanumeric value, followed by a single-quote, 
+			and then followed by the word 'or'. The Boolean logic that comes after this may be varied to an extent where a generic pattern is either very 
+			complex or does not cover all the variants. Thus these attacks can be detected to a fair degree of accuracy by using the next regular expression, 
+			in section 2.3 below.
+		</desc>
+	</attack>
+	<attack>
+		<name>Regex for typical SQL Injection attack</name>
+		<code>/\w*((\%27)|(\'))((\%6F)|o|(\%4F))((\%72)|r|(\%52))/ix</code>
+		<level>1</level>
+		<desc>
+			The use of the 'union' SQL query is also common in SQL Injection attacks against a variety of databases. 
+			If the earlier regular expression that just detects the single-quote or other SQL meta characters results in too many false positives, 
+			you could further modify the query to specifically check for the single-quote and the keyword 'union'. 
+			This can also be further extended to other SQL keywords such as 'select', 'insert', 'update', 'delete', etc.
+		</desc>
+	</attack>	
+	<attack>
+		<name>Regex for detecting SQL Injection with the UNION keyword</name>
+		<code>/((\%27)|(\'))union/ix</code>
+		<level>1</level>
+		<desc>
+			The use of the 'union' SQL query is also common in SQL Injection attacks against a variety of databases. 
+			If the earlier regular expression that just detects the single-quote or other SQL meta characters results in too many false positives, 
+			you could further modify the query to specifically check for the single-quote and the keyword 'union'. 
+			This can also be further extended to other SQL keywords such as 'select', 'insert', 'update', 'delete', etc.
+		</desc>
+	</attack>	
+	<attack>
+		<name>Regex for detecting SQL Injection attacks on a MS SQL Server</name>
+		<code>/exec(\s|\+)+(s|x)p\w+/ix</code>
+		<level>1</level>
+		<desc>
+			If, by this stage, the attacker has discovered that the Web application is vulnerable to SQL injection, he will try to exploit it. 
+			If he realizes that the back-end database is on an MS SQL server, he will typically try to execute one of the many dangerous stored and 
+			extended stored procedures. These procedures start with the letters 'sp' or 'xp' respectively. Typically, he would try to execute the 
+			'xp_cmdshell' extended procedure, which allows the execution of Windows shell commands through the SQL Server. The access rights with 
+			which these commands will be executed are those of the account with which SQL Server is running -- usually Local System. 
+			Alternatively, he may also try and modify the registry using procedures such as xp_regread, xp_regwrite, etc.
+		</desc>
+	</attack>		
+</xss>

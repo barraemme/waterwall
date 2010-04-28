@@ -1,0 +1,224 @@
+<?php
+/**
+ * Waterwall component adds a audit functionality
+ * to application.
+ * Intercept XSS, SQL injection and other attacks. 
+ * 
+ * Main features are dictionary loading and callbacks
+ * from the controller. 
+ * 
+ * @author Barbiero Mattia
+ * @version 1.0
+ * @license http://www.fsf.org/licensing/licenses/lgpl.html Licenze LGPL
+ * @category Components
+ */
+
+class WaterwallComponent extends Object {
+	
+	var $_settings = array(
+		'xss' => array(
+			'level' => 1, //1 => basic,2 => medium,3 => paranoic - 0 to disable
+			'source' => 'REQUEST', // POST or GET or REQUEST,
+			'callback' => false 
+		),
+		'sql' => array(
+			'level' => 1, //1 => basic,2 => medium,3 => paranoic - 0 to disable
+			'source' => 'REQUEST', // POST or GET or REQUEST 
+			'callback' => false 
+		),
+		'file' => array(
+			'level' => 1, //1 => basic,2 => medium,3 => paranoic - 0 to disable
+			'source' => 'FILES', // FILE
+			'callback' => false 
+		),
+		'autoscan' => true		
+	);
+	
+	var $attacks = array();		
+	
+	//called before Controller::beforeFilter()
+	function initialize(&$controller, $settings = array()) {
+		// saving the controller reference for later use
+		$this->controller =& $controller;		
+		$this->_settings = Set::merge($this->_settings, $settings);	
+		if($this->_settings['autoscan'])
+			$this->autoscan();		
+	}
+	//called after Controller::beforeFilter()
+	//function startup(&$controller) {}
+
+	//called after Controller::beforeRender()
+	//function beforeRender(&$controller) {}
+
+	//called after Controller::render()
+	//function shutdown(&$controller) {}
+
+	//called before Controller::redirect()
+	//function beforeRedirect(&$controller, $url, $status=null, $exit=true) {}
+
+	//function redirectSomewhere($value) {
+		// utilizing a controller method
+	//	$this->controller->redirect($value);
+	//}
+	function analyze($overwrited_cfg = false){
+		$original_cfg = $this->_settings;
+		if(!empty($overwrited_cfg) && is_array($overwrited_cfg))
+			$this->_settings = Set::merge($this->_settings, $overwrited_cfg);
+		
+		$this->autoscan();	
+			
+		$this->_settings = $original_cfg;		
+	}
+	
+	function autoscan(){
+		$this->checkXSS();
+		$this->checkSQL();
+		$this->checkFILE();
+	}
+	
+	function checkXSS(){
+		if($this->_settings['xss']['level']>0){		
+			$full_array = $this->loadDictionary( ROOT.DS.APP_DIR.DS.'vendors/waterwall/xssAttacks.xml');			
+			if($this->_settings['xss']['level']<3){	
+				$filtered = array('Xss'=>array('Attack'=>array()));			
+				foreach($full_array['Xss']['Attack'] as $attack){ 							
+					if($attack['level'] <= $this->_settings['xss']['level'])						  	
+						$filtered['Xss']['Attack'][] = $attack;					
+				}				
+				$this->attacks = Set::merge($this->attacks,	$filtered);
+									
+			}else
+				$this->attacks = Set::merge($this->attacks,	$full_array);	
+		}
+		
+		return $this->_dispatcher('xss');			
+	}
+	
+	function checkSQL(){
+		if($this->_settings['sql']['level']>0)		
+			$full_array = $this->loadDictionary( ROOT.DS.APP_DIR.DS.'vendors/waterwall/sqlAttacks.xml');			
+			if($this->_settings['sql']['level']<3){	
+				$filtered = array('Sql'=>array('Attack'=>array()));			
+				foreach($full_array['Sql']['Attack'] as $attack){ 							
+					if($attack['level'] <= $this->_settings['xss']['level'])						  	
+						$filtered['Xss']['Attack'][] = $attack;					
+				}				
+				$this->attacks = Set::merge($this->attacks,	$filtered);
+									
+			}else
+				$this->attacks = Set::merge($this->attacks,	$full_array);
+		return $this->_dispatcher('sql');			
+	}
+	
+	function checkFILE(){
+		if($this->_settings['file']['level']>0)		
+			$this->attacks = Set::merge($this->attacks,	$this->loadDictionary(ROOT.DS.APP_DIR.DS.'vendors/waterwall/fliAttacks.xml'));	
+		
+		return $this->_parseFile($_FILES, 'file');			
+	}
+	
+	function _dispatcher($type){
+		$result = 0;
+		switch(strtoupper($this->_settings[$type]['source'])){
+			case 'GET':
+				$result = $this->_parseArray($_GET,$type);
+			break;
+			case 'POST':
+				$result = $this->_parseArray($_POST,$type);
+			break;
+			case 'REQUEST':
+				$result = $this->_parseArray($_REQUEST,$type);
+			break;			
+		}	
+		return $result;
+	}
+	
+	function _parseArray($pieces,$type)
+	{
+		$result = 0;
+		foreach( $pieces as $r_pieces )
+		{
+    		if( is_array( $r_pieces ) )
+    		{
+      			$result += $this->_parseArray($r_pieces,$type);				
+    		}
+    		else	
+    		{    					
+      			foreach($this->attacks[ucfirst($type)]['Attack'] as $attack){      				
+					$local_result = preg_match($attack['code'], $r_pieces);
+					if($local_result > 0){
+						$this->logAttack(strtoupper($type), $r_pieces, strtoupper($this->_settings[$type]['source']),  $attack['name']); 
+						$this->loaderExecute($this->_settings[$type]['callback'], array('type'=>$type, 'source' =>$this->_settings[$type]['source'], 'malicious_code' => $r_pieces ));
+						$result += $local_result;						
+						break 2;
+					}									
+				}				
+    		}
+	  	}
+	  	return $result;
+	}	
+	
+	function _parseFile($pieces, $type){
+		foreach( $pieces as $r_pieces ){
+			if(is_array($r_pieces['tmp_name']))
+				$files = $r_pieces['tmp_name'];
+			else	
+				$files = array($r_pieces['tmp_name']);
+				
+			foreach($files as $tmpfile)
+			{			
+				$handle = fopen ($r_pieces['tmp_name'], "rb");
+				while (!feof($handle)) {
+					$buffer = fgets($handle);
+				}
+				fclose ($handle);
+				
+				//TODO use more consistent regexp
+				if(preg_match("/php/",$buffer, $matches)){
+					$this->loaderExecute($this->_settings[$type]['callback'], array('type'=>$type, 'source' =>$tmpfile, 'malicious_code' => $matches[0] ));
+					return 1;		
+				}
+			}			
+		}
+		return 0;
+	}
+	
+	function loadDictionary($file=null){	
+		if(!$file)
+			return false;
+				
+    	// import XML class
+    	App::import('Xml');    	
+		
+    	// now parse it
+    	$parsed_xml =& new XML($file);
+    	$parsed_xml = Set::reverse($parsed_xml);
+    	
+    	return $parsed_xml;
+	}	
+	
+	function logAttack($type, $code, $req, $mex){
+		$text = 'New attack '.$type.' - '.$req.' found from: '.$_SERVER [ 'REMOTE_ADDR' ].': '.$_SERVER [ 'HTTP_USER_AGENT' ].' - ';
+		$text .= $code.' - '.$mex;	
+		$this->log($text, LOG_ERROR);
+	}
+	
+		
+	/**
+     * Executes specified callback $method from controller class.
+     * 
+     * @param string $method - name of the method to execute
+     * @param array $data - data to pass on method
+     * @return void
+     * @access public
+     */
+    function loaderExecute($method, $data) {
+    	if(!$method)
+			return;
+    	$loader_class = get_class($this->controller); 
+		if (in_array($method, get_class_methods($loader_class)))    	
+			call_user_func_array(array($this->controller, $method), $data);        
+    }
+
+}
+?>

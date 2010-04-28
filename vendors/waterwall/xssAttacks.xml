@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<xss>
+	<attack>
+		<name>Simple CSS attack</name>
+		<code>/((\%3C)|&lt;)((\%2F)|\/)*[a-z0-9\%]+((\%3E)|&gt;)/ix</code>
+		<level>3</level>
+		<desc>
+			Checks for attacks that may contain HTML opening tags and closing tags with any text inside. 
+			It will catch attempts to use &lt;b&gt; or &lt;u&gt; or &lt;script&gt;. 
+			The regex is case-insensitive. 
+			We also need to check for the presence of angled brackets, as well as their hex equivalents, or (%3C|&lt;). 
+			To detect the hex conversion of the entire string, we must check for the presence of numbers as well as the % sign in the user input, 
+			in other words, the use of [a-z0-9%]. This may sometimes result in false-positives, but most of the time will detect the actual attack.
+		</desc>
+	</attack>
+	<attack>
+		<name>Detect script tag</name>
+		<code>/((\%3C)|&lt;|&#38;&#108;&#116;&#59;)((\%73)|&#115;)((\%63)|&#99;)((\%72)|&#114;)((\%69)|&#105;)((\%70)|&#112;)((\%74)|&#116;)((\%3E)|&gt;|&#38;&#103;&#116;&#59;)/ix</code>
+		<level>1</level>
+		<desc>
+			Checks for attacks that may contain HTML opening tags and closing tags with any text inside. 
+			It will catch attempts to use &lt;b&gt; or &lt;u&gt; or &lt;script&gt;. 
+			The regex is case-insensitive. 
+			We also need to check for the presence of angled brackets, as well as their hex equivalents, or (%3C|&lt;). 
+			To detect the hex conversion of the entire string, we must check for the presence of numbers as well as the % sign in the user input, 
+			in other words, the use of [a-z0-9%]. This may sometimes result in false-positives, but most of the time will detect the actual attack.
+		</desc>
+	</attack>
+	<attack><!-- todo iframe -->
+		<name>"&lt;img src" CSS attack</name>
+		<code>/((\%3C)|&lt;)((\%69)|i|(\%49))((\%6D)|m|(\%4D))((\%67)|g|(\%47))[^\n]+((\%3E)|&gt;)/i</code>
+		<level>2</level>
+		<desc>
+			Cross-site scripting can also be accomplished by using the &lt;img src=&gt; technique. The existing default snort signature can be easily evaded. 			
+		</desc>
+	</attack>	
+	<attack>
+		<name>Paranoid regex for CSS attacks</name>
+		<code>/((\%3C)|&lt;)[^\n]+((\%3E)|&gt;)/i</code>
+		<level>3</level>
+		<desc>
+			This signature simply looks for the opening HTML tag, and its hex equivalent, followed by one or more characters other than the newline, 
+			and then followed by the closing tag or its hex equivalent. 
+			This may end up giving a few false positives depending upon how your Web application and Web server are structured, but it is guaranteed to 
+			catch anything that even remotely resembles a cross-site scripting attack.
+		</desc>
+	</attack>	
+	<attack>
+		<name>Paranoid regex for CSS attacks (only open tag)</name>
+		<code>/((\%3C)|&lt;)[^\n]+[^((\%3E)|&gt;)]/i</code>
+		<level>3</level>
+		<desc>
+			This signature simply looks for the opening HTML tag, and its hex equivalent, followed by one or more characters other than the newline, 
+			and then followed by the closing tag or its hex equivalent. 
+			This may end up giving a few false positives depending upon how your Web application and Web server are structured, but it is guaranteed to 
+			catch anything that even remotely resembles a cross-site scripting attack.
+		</desc>
+	</attack>	
+	<attack>
+		<name>US-ASCII encoding CSS</name>
+		<code>/\%BCscript\%BE(.*)%BC\/script\%BE/i</code>
+		<level>3</level>
+		<desc>
+			This signature simply looks for the opening HTML tag, and its hex equivalent, followed by one or more characters other than the newline, 
+			and then followed by the closing tag or its hex equivalent. 
+			This may end up giving a few false positives depending upon how your Web application and Web server are structured, but it is guaranteed to 
+			catch anything that even remotely resembles a cross-site scripting attack.
+		</desc>
+	</attack>
+	<attack>
+		<name>Script word CSS</name>
+		<code>/(.*)script(.*)/i</code>
+		<level>3</level>
+		<desc>
+			This signature simply looks for the opening HTML tag, and its hex equivalent, followed by one or more characters other than the newline, 
+			and then followed by the closing tag or its hex equivalent. 
+			This may end up giving a few false positives depending upon how your Web application and Web server are structured, but it is guaranteed to 
+			catch anything that even remotely resembles a cross-site scripting attack.
+		</desc>
+	</attack>		
+</xss>
