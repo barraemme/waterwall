@@ -1,0 +1,105 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+@font-face {
+    font-family: "Apantasia";
+    src: url("APANRG__.eot");
+    src: local("Apantasia"), 
+         url("APANRG__.TTF") format("truetype");
+}
+
+.gray {
+  color:#333
+}
+
+.green {
+  color:#aad400
+}
+
+#logo {
+  font-family:"Apantasia";
+  width:50em;
+  margin:2em auto 0 auto
+}
+
+#logo,#logo h2 span#art,#logo h3 {
+  position:relative
+}
+
+#logo h1 {
+  letter-spacing:-1px;
+  font-size:5em
+}
+
+#logo h1,#logo h2,#logo h3 {
+  font-weight:normal
+}
+
+#logo h2,#logo h3 {
+  font-size:1.813em
+}
+
+#logo h2 {
+  margin-top:-1em
+}
+
+#logo h2 span#art {
+  left:2.5em
+}
+
+#logo h3 {
+  left:3.45em;
+  margin-top:-0.2em
+}
+
+#logo h3 span {
+  margin-right:0.5em
+}
+
+#logo div#greencircle,#logo div#yellowcircle,#logo div#orangecircle {
+  background:#fff;
+  border-radius:80px;
+  -moz-border-radius:80px;
+  -webkit-border-radius:80px;
+  -khtml-border-radius:80px;
+  display:block;
+  position:absolute
+}
+
+#logo div#greencircle {
+  behavior:url("border-radius.htc");
+  border:10px solid #aad400;
+  width:80px;
+  height:80px;
+  top:10px;
+  left:7em;
+  line-height:81px;
+  text-align:center;
+  color:#338000;
+  font-size:72px;
+  overflow:hidden
+}
+
+#logo div#yellowcircle,#logo div#orangecircle {
+  behavior:url(border-radius.htc)
+}
+
+#logo div#yellowcircle {
+  border:8px solid #ffd42a;
+  width:60px;
+  height:60px;
+  top:0;
+  left:38.5em
+}
+
+#logo div#orangecircle {
+  border:6px solid #f60;
+  width:40px;
+  height:40px;
+  top:15px;
+  left:44em
+}
+
+
